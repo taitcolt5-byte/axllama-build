@@ -38,14 +38,20 @@ jobs:
       - name: Build
         run: cmake --build build-android --config Release -j$(nproc)
 
-      - name: Collect .so
+      - name: Collect
         run: |
           mkdir -p out
-          find build-android -name "*.so" -exec cp {} out/ \;
+          find build-android -name "*.so" -type f -exec cp {} out/ \;
+          find build-android -type f -name "llama-server" -exec cp {} out/ \;
+          rm -f out/libllama-{bench,batched-bench,cli,completion,fit-params,perplexity,quantize}-impl.so
+          STRIP=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip
+          $STRIP out/* || true
           ls -lh out/
+          echo "=== llama-server NEEDED ==="
+          readelf -d out/llama-server | grep -E "NEEDED|RUNPATH|RPATH" || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: llama-android-arm64
-          path: out/*.so
+          path: out/*
